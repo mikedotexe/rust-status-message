@@ -4,6 +4,7 @@
   "description": "Compiles NEAR Protocol example of setting and retrieving a status message per NEAR account",
   "scripts": {
     "build": "cargo build --target wasm32-unknown-unknown --release",
+    "test": "cargo test -- --nocapture",
     "postbuild": "cp target/wasm32-unknown-unknown/release/status_message.wasm ./res/"
   },
   "repository": {
