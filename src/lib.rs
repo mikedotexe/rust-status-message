@@ -1,7 +1,6 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LookupMap;
 use near_sdk::{env, near_bindgen};
-use std::str;
 
 near_sdk::setup_alloc!();
 
@@ -12,7 +11,7 @@ pub struct StatusMessage {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-struct SetMessageInput {
+pub struct SetMessageInput {
     // Note that the key does not have to be "message" like the argument name.
     msg: String,
 }
@@ -38,19 +37,8 @@ impl StatusMessage {
 
     /// This is an advanced example demonstrating cross-contract calls
     /// and a custom serializer.
-    pub fn set_status_borsh(&mut self, #[serializer(borsh)] message: Vec<u8>) {
-        let message: String = if cfg!(target_arch = "wasm32") {
-            match str::from_utf8(message.as_slice()) {
-                Ok(m) => m.to_string(),
-                Err(_) => env::panic(b"Invalid UTF-8 sequence"),
-            }
-        } else {
-            let message_obj: SetMessageInput = BorshDeserialize::try_from_slice(&message)
-                .expect("Could not deserialize borsh.");
-            message_obj.msg
-        };
-
-        self.records.insert(&env::signer_account_id(), &String::from(message));
+    pub fn set_status_borsh(&mut self, #[serializer(borsh)] message: SetMessageInput) {
+        self.records.insert(&env::signer_account_id(), &String::from(message.msg));
     }
 }
 
@@ -102,6 +90,7 @@ mod tests {
         assert_eq!(None, contract.get_status("francis.near".to_string()));
     }
 
+    /// This test is simply a helper to print out the base64 value.
     #[test]
     fn borsh_simple() {
         let status_message = "Aloha honua!".to_string();
@@ -112,15 +101,5 @@ mod tests {
         let borsh_serialized: Vec<u8> = borsh_input.try_to_vec().unwrap();
         let base64_encoded = near_primitives::serialize::to_base64(borsh_serialized.as_slice());
         println!("Using NEAR CLI, this is the base64-encoded value to use: {:?}", base64_encoded);
-
-        // Set up testing environment and contract
-        let context = get_context(vec![], false);
-        testing_env!(context);
-        let mut contract = StatusMessage::default();
-
-        contract.set_status_borsh(borsh_serialized);
-        let get_result = contract.get_status("bob_near".to_string()).unwrap();
-
-        assert_eq!(status_message.to_string(), get_result);
     }
 }
